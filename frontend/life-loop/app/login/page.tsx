@@ -15,17 +15,17 @@ export default function Login() {
         <div className="flex-1 flex justify-end"></div>
       </nav>
 
-      <section className="min-h-[75vh] flex justify-center px-12 py-12">
-        <div className="w-full max-w-2xl mx-auto bg-[#4A7A8F] p-8 rounded-lg">
-          <h1 className="text-5xl font-bold tracking-tight text-[#FCF7F8] text-center mb-8 whitespace-nowrap">
+      <section className="min-h-[75vh] flex justify-center px-8 py-12">
+        <div className="w-full max-w-lg mx-auto bg-[#4A7A8F] p-6 rounded-lg">
+          <h1 className="text-3xl font-bold tracking-tight text-[#FCF7F8] text-center mb-6">
             Login to your Account  
           </h1>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <input
                 type="text"
-                className="w-full px-6 py-4 rounded-md text-white bg-transparent border-2 border-white text-center text-xl placeholder-white/70"
+                className="w-full px-4 py-3 rounded-md text-white bg-transparent border-2 border-white text-center text-lg placeholder-white/70"
                 placeholder="Enter your username or email address"
               />
             </div>
@@ -33,27 +33,27 @@ export default function Login() {
             <div>
               <input
                 type="password"
-                className="w-full px-6 py-4 rounded-md text-white bg-transparent border-2 border-white text-center text-xl placeholder-white/70"
+                className="w-full px-4 py-3 rounded-md text-white bg-transparent border-2 border-white text-center text-lg placeholder-white/70"
                 placeholder="Enter your password"
               />
             </div>  
 
-            <div className="space-y-3 mt-8">
+            <div className="space-y-2 mt-6">
               <button
-                className="w-full rounded-md bg-black px-8 py-3 text-lg font-medium text-white transition-colors hover:bg-white hover:text-blac"
+                className="w-full rounded-md bg-black px-6 py-2.5 text-lg font-medium text-white transition-colors hover:bg-white hover:text-blac"
               >
                 Login 
               </button>
                <button
-                className="w-full rounded-md bg-black px-8 py-3 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
+                className="w-full rounded-md bg-black px-6 py-2.5 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
               >
                 Login with Google  
               </button>
             </div>
 
-            <div className="space-y-3 mt-8">
+            <div className="space-y-2 mt-6">
               <button
-                className="w-full rounded-md bg-black px-8 py-3 text-lg font-medium text-white transition-colors hover:bg-white hover:text-blac"
+                className="w-full rounded-md bg-black px-6 py-2.5 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
               >
                 Sign up  
               </button>
