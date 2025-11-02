@@ -69,9 +69,9 @@ export default function Login() {
         <div className="flex-1 flex justify-end"></div>
       </nav>
 
-      <section className="min-h-[75vh] flex justify-center px-8 py-12">
+      <section className="min-h-[75vh] flex justify-center px-8 py-16">
         <div className="w-full max-w-lg mx-auto bg-[#4A7A8F] p-6 rounded-lg">
-          <h1 className="text-3xl font-bold tracking-tight text-[#FCF7F8] text-center mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-[#FCF7F8] text-center mb-6">
             Login to your Account  
           </h1>
 
@@ -81,7 +81,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-md text-white bg-transparent border-2 border-white text-center text-lg placeholder-white/70"
+                className="w-full px-4 py-3 rounded-full text-white bg-transparent border-2 border-white text-center text-base placeholder-white/70"
                 placeholder="Enter your email address"
                 required
               />
@@ -91,7 +91,7 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-md text-white bg-transparent border-2 border-white text-center text-lg placeholder-white/70"
+                className="w-full px-4 py-3 rounded-full text-white bg-transparent border-2 border-white text-center text-base placeholder-white/70"
                 placeholder="Enter your password"
                 required
               />
@@ -100,7 +100,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-md bg-black px-6 py-2.5 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black disabled:opacity-50"
+                className="w-full rounded-full bg-black px-6 py-2.5 text-base font-medium text-white transition-colors hover:bg-white hover:text-black disabled:opacity-50"
               >
                 {loading ? 'Loading...' : 'Login'}
               </button>
@@ -108,7 +108,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleGoogleAuth}
-                className="w-full rounded-md bg-white px-6 py-2.5 text-lg font-medium text-black transition-colors hover:bg-white hover:text-black flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full rounded-full bg-white px-6 py-2.5 text-base font-medium text-black transition-colors hover:bg-white hover:text-black flex items-center justify-center gap-2 cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

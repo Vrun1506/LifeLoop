@@ -17,14 +17,14 @@ export default function Home() {
         <div className="flex-1 flex justify-end gap-3">
           <a
               href="/login"
-              className="inline-block rounded-md border border-black bg-white px-6 py-3 text-base font-medium text-black transition-colors hover:text-blue-500"
+              className="inline-block rounded-full border border-black bg-white px-6 py-3 text-base font-medium text-black transition-colors hover:text-black"
             >
               Login   
             </a>
           
           <a
               href="/signup"
-              className="inline-block rounded-md border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:text-blue-500"
+              className="inline-block rounded-full border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:text-black hover:bg-white hover:text-black"
             >
               Sign Up  
             </a>
@@ -37,12 +37,12 @@ export default function Home() {
             LifeLoop 
           </h1>
           <p className="mt-6 text-xl text-[#FCF7F8]">
-            A web application that provides real-time updates on the online presence of users.    
+            A web application that provides knowledge on the online activity of users.
           </p>
           <div className="mt-8">
             <a
               href="/login"
-              className="inline-block rounded-md border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:bg-white hover:text-black"
+              className="inline-block rounded-full border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:bg-white hover:text-black"
             >
               Get Started
             </a>
@@ -54,11 +54,11 @@ export default function Home() {
       <section className="py-12 px-8 bg-[#4A7A8F]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-5xl font-bold text-center text-[#FCF7F8] mb-12">What is LifeLoop?</h2>
-          <div className="bg-[#4A7A8F] p-3 rounded-lg">
-            <p className="text-xl text-[#FCF7F8] mb-4 text-center">LifeLoop scrapes online data on its users from popular platforms.</p>
-            <p className="text-xl text-[#FCF7F8] mb-4 text-center">It transcribes posts from social media and </p>
-            <p className="text-xl text-[#FCF7F8] mb-4 text-center">test</p>
-            <p className="text-xl text-[#FCF7F8] text-center">Bad</p>
+          <div className="bg-[#4A7A8F] p-1 rounded-lg">
+            <p className="text-xl text-[#FCF7F8] mb-4 text-center">LifeLoop reconnects university students to their parents and family members.</p>
+            <p className="text-xl text-[#FCF7F8] mb-4 text-center">It works by providing updates on the online activity of busy students for parents. </p>
+            <p className="text-xl text-[#FCF7F8] mb-4 text-center">Test text</p>
+            <p className="text-xl text-[#FCF7F8] text-center">Test text</p>
           </div>
         </div>
     </section>
@@ -92,7 +92,7 @@ export default function Home() {
 
           <a
             href="#"
-            className="inline-block rounded-md bg-black px-8 py-4 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
+            className="inline-block rounded-full bg-black px-8 py-4 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
           >
             Sign Up Now
           </a>
