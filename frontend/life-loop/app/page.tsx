@@ -23,7 +23,7 @@ export default function Home() {
             </a>
           
           <a
-              href="#"
+              href="/signup"
               className="inline-block rounded-md border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:text-blue-500"
             >
               Sign Up  
