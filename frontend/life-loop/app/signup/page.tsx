@@ -18,7 +18,7 @@ export default function Signup() {
         <div className="flex-1 flex justify-end"></div>
       </nav>
 
-      <section className="min-h-[50vh] flex justify-center px-8 py-36">
+      <section className="min-h-[50vh] flex justify-center px-8 py-16">
         <div className="w-full max-w-lg mx-auto bg-[#4A7A8F] p-6 rounded-lg">
           <h1 className="text-3xl font-bold tracking-tight text-[#FCF7F8] text-center mb-6">
             Sign up for an Account   

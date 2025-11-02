@@ -37,11 +37,11 @@ export default function Home() {
             LifeLoop 
           </h1>
           <p className="mt-6 text-xl text-[#FCF7F8]">
-            A web application that does something.    
+            A web application that provides real-time updates on the online presence of users.    
           </p>
           <div className="mt-8">
             <a
-              href="#"
+              href="/login"
               className="inline-block rounded-md border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:bg-white hover:text-black"
             >
               Get Started
@@ -51,13 +51,13 @@ export default function Home() {
       </section>
 
       {/* Description Section */}
-      <section className="py-16 px-8 bg-[#4A7A8F]">
+      <section className="py-12 px-8 bg-[#4A7A8F]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-5xl font-bold text-center text-[#FCF7F8] mb-12">What is LifeLoop?</h2>
-          <div className="bg-[#4A7A8F] p-12 rounded-lg">
-            <h3 className="text-3xl font-bold mb-6 text-[#FCF7F8] text-center">Provides real-time updates on the online digital footprint of its users.</h3>
-            <p className="text-xl text-[#FCF7F8] mb-4 text-center">Scraps data from various online sources to gather information.</p>
-            <p className="text-xl text-[#FCF7F8] mb-4 text-center"></p>
+          <div className="bg-[#4A7A8F] p-3 rounded-lg">
+            <p className="text-xl text-[#FCF7F8] mb-4 text-center">LifeLoop scrapes online data on its users from popular platforms.</p>
+            <p className="text-xl text-[#FCF7F8] mb-4 text-center">It transcribes posts from social media and </p>
+            <p className="text-xl text-[#FCF7F8] mb-4 text-center">test</p>
             <p className="text-xl text-[#FCF7F8] text-center">Bad</p>
           </div>
         </div>

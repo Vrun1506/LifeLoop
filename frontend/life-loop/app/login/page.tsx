@@ -62,9 +62,9 @@ export default function Login() {
           </h1>
         </div>
         <div className="flex justify-center space-x-4">
-          <a href="#" className="text-[#FCF7F8] hover:text-black">Home</a>
-          <a href="#" className="text-[#FCF7F8] hover:text-black">About</a>
-          <a href="#" className="text-[#FCF7F8] hover:text-black">Contact Us</a>
+          <a href="/" className="text-[#FCF7F8] hover:text-black">Home</a>
+          <a href="/" className="text-[#FCF7F8] hover:text-black">About</a>
+          <a href="/" className="text-[#FCF7F8] hover:text-black">Contact Us</a>
         </div>
         <div className="flex-1 flex justify-end"></div>
       </nav>
