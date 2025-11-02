@@ -23,14 +23,13 @@ export default function Home() {
             </a>
           
           <a
-              href="#"
+              href="/signup"
               className="inline-block rounded-md border border-black bg-black px-6 py-3 text-base font-medium text-white transition-colors hover:text-blue-500"
             >
               Sign Up  
-            </a>
-        </div> 
+          </a>
+        </div>        
       </nav>
-
       <section className="flex flex-col items-center justify-center px-5 py-24">
         <div className="text-center max-w-4xl">
           <h1 className="text-7xl font-bold tracking-tight text-[#FCF7F8]">
