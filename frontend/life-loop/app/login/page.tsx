@@ -26,12 +26,17 @@ export default function Login() {
       if (data.user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('ig_username')
+          .select('ig_username, parent_email, is_parent_confirmed')
           .eq('id', data.user.id)
           .single()
 
-        // If no Instagram username, redirect to complete profile
-        if (!profile || !profile.ig_username) {
+        const needsConsent =
+          !profile ||
+          !profile.parent_email ||
+          profile.is_parent_confirmed === null ||
+          profile.is_parent_confirmed === false
+
+        if (!profile || !profile.ig_username || needsConsent) {
           router.push('/complete-profile')
         } else {
           router.push('/')
@@ -127,7 +132,7 @@ export default function Login() {
                 href="/signup"
                 className="block w-full text-center rounded-md bg-transparent border-2 border-white px-6 py-2.5 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
               >
-                Don't have an account? Sign up  
+                Don&apos;t have an account? Sign up  
               </a>
             </div>
           </form>
