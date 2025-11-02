@@ -8,7 +8,6 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -17,20 +16,26 @@ export default function Login() {
     setLoading(true)
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
-        if (error) throw error
-        alert('Check your email for the confirmation link!')
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (error) throw error
-        router.push('/')
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (error) throw error
+
+      // Check if user has Instagram username
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('ig_username')
+          .eq('id', data.user.id)
+          .single()
+
+        // If no Instagram username, redirect to complete profile
+        if (!profile || !profile.ig_username) {
+          router.push('/complete-profile')
+        } else {
+          router.push('/')
+        }
       }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'An error occurred')
@@ -50,8 +55,6 @@ export default function Login() {
       alert(error.message)
     }
   }
-
-
 
   return (
     <div className="font-sans text-white bg-[#5C91A9]">
@@ -121,7 +124,7 @@ export default function Login() {
             </div>
             <div className="space-y-2 mt-6">
               <a
-                href="/register"
+                href="/signup"
                 className="block w-full text-center rounded-md bg-transparent border-2 border-white px-6 py-2.5 text-lg font-medium text-white transition-colors hover:bg-white hover:text-black"
               >
                 Don't have an account? Sign up  

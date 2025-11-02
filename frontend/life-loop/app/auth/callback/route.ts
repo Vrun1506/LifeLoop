@@ -9,7 +9,25 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
     if (!error) {
+      // Get the user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Check if profile exists with Instagram username
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('ig_username')
+          .eq('id', user.id)
+          .single()
+        
+        // If no profile or no Instagram username, redirect to complete profile
+        if (!profile || !profile.ig_username) {
+          return NextResponse.redirect(`${origin}/complete-profile`)
+        }
+      }
+      
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
