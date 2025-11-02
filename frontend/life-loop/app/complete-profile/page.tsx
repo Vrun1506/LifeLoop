@@ -241,6 +241,24 @@ export default function CompleteProfile() {
     setLoading(true)
 
     try {
+      const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL
+      if (!backendBaseUrl) {
+        setStatusMessage('Backend API URL is not configured. Please contact the LifeLoop team.')
+        setLoading(false)
+        return
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const accessToken = session?.access_token
+      if (!accessToken) {
+        setStatusMessage('Your session expired. Please log in again and retry the consent form.')
+        setLoading(false)
+        return
+      }
+
       const formData = new FormData()
       formData.append('instagramUsername', instagramUsername.trim())
       formData.append('parentEmail', parentEmail.trim())
@@ -249,18 +267,30 @@ export default function CompleteProfile() {
         formData.append('voiceSample', voiceSample)
       }
 
-      const response = await fetch('/api/parent-request', {
+      const response = await fetch(`${backendBaseUrl.replace(/\/$/, '')}/parent-request`, {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: formData,
       })
 
       if (!response.ok) {
-        const message = await response.text()
-        throw new Error(message || 'Failed to submit parent request.')
+        let errorMessage = 'Failed to submit parent request.'
+        try {
+          const errorPayload = await response.json()
+          errorMessage = errorPayload?.error || errorMessage
+        } catch {
+          // ignore body parse errors
+        }
+        throw new Error(errorMessage)
       }
 
-      setStatusMessage('We’ve emailed your parent with next steps. Welcome to LifeLoop!')
-      router.push('/main-screen')
+      const body = await response.json().catch(() => null)
+      const confirmationMessage =
+        body?.message || 'We’ve emailed your parent with next steps. Welcome to LifeLoop!'
+      setStatusMessage(confirmationMessage)
+      router.push('/dashboard')
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Something went wrong submitting your details.')
     } finally {

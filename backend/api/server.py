@@ -6,18 +6,26 @@ import os
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 import boto3
 import requests
 import resend
 from email_templates import (render_digest_email,
                              render_parent_confirmation_email)
 from flask import Flask, Response, jsonify, request
+from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
+ALLOWED_ORIGINS = os.getenv("APP_ALLOWED_ORIGINS", "*")
+CORS(
+    app,
+    resources={r"/*": {"origins": ALLOWED_ORIGINS}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Content-Type"],
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,6 +41,7 @@ s3 = boto3.client(
 
 BUCKET_NAME = os.getenv("R2_BUCKET_NAME")
 R2_PUBLIC_BASE_URL = os.getenv("R2_PUBLIC_BASE_URL")
+APP_BASE_URL = os.getenv("APP_BASE_URL")
 
 
 # --- Supabase REST Configuration ---
@@ -50,6 +59,119 @@ if SUPABASE_SERVICE_KEY:
             "Prefer": "return=representation",
         }
     )
+
+
+def _supabase_headers(prefer: Optional[str] = None) -> Dict[str, str]:
+    if not SUPABASE_SERVICE_KEY:
+        raise RuntimeError("Supabase REST configuration is incomplete.")
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+    }
+    if prefer:
+        headers["Prefer"] = prefer
+    return headers
+
+
+def _fetch_authenticated_user(access_token: str) -> Dict[str, Any]:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        raise RuntimeError("Supabase authentication not configured.")
+
+    response = requests.get(
+        f"{SUPABASE_URL.rstrip('/')}/auth/v1/user",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "apikey": SUPABASE_SERVICE_KEY,
+        },
+        timeout=30,
+    )
+
+    if response.status_code == 401:
+        raise PermissionError("Invalid or expired session token.")
+
+    response.raise_for_status()
+    return response.json()
+
+
+def _upsert_user_profile(payload: Dict[str, Any]) -> Dict[str, Any]:
+    headers = _supabase_headers("return=representation,resolution=merge-duplicates")
+    response = requests.post(
+        f"{SUPABASE_REST_URL}/user_profiles",
+        headers=headers,
+        data=json.dumps([payload]),
+        timeout=30,
+    )
+    response.raise_for_status()
+    body = response.json()
+    return body[0] if body else payload
+
+
+def _insert_parent_confirmation(payload: Dict[str, Any]) -> Dict[str, Any]:
+    headers = _supabase_headers("return=representation")
+    response = requests.post(
+        f"{SUPABASE_REST_URL}/parent_confirmations",
+        headers=headers,
+        data=json.dumps(payload),
+        timeout=30,
+    )
+    response.raise_for_status()
+    body = response.json()
+    return body[0] if isinstance(body, list) and body else body
+
+
+def _upload_voice_sample_for_user(user_id: str, filename: str, body: bytes, content_type: Optional[str]) -> str:
+    if not BUCKET_NAME:
+        raise RuntimeError("R2 bucket configuration missing. Set R2_BUCKET_NAME.")
+
+    safe_name = filename or "voice-sample"
+    safe_name = safe_name.replace(" ", "_")
+    key = f"voice-samples/{user_id}/{int(dt.datetime.utcnow().timestamp())}-{safe_name}"
+
+    s3.put_object(
+        Bucket=BUCKET_NAME,
+        Key=key,
+        Body=body,
+        ContentType=content_type or "audio/mpeg",
+        ACL="private",
+    )
+
+    if R2_PUBLIC_BASE_URL:
+        return f"{R2_PUBLIC_BASE_URL.rstrip('/')}/{key}"
+    return key
+
+
+def _register_elevenlabs_voice(user_id: str, filename: str, body: bytes, content_type: Optional[str]) -> Optional[str]:
+    if not ELEVENLABS_API_KEY:
+        logger.warning("ELEVENLABS_API_KEY missing; skipping voice cloning.")
+        return None
+
+    files = {
+        "files": (
+            filename or "voice-sample",
+            body,
+            content_type or "audio/mpeg",
+        )
+    }
+    data = {"name": f"LifeLoop-{user_id}"}
+    try:
+        response = requests.post(
+            "https://api.elevenlabs.io/v1/voices/add",
+            headers={"xi-api-key": ELEVENLABS_API_KEY},
+            files=files,
+            data=data,
+            timeout=120,
+        )
+        if not response.ok:
+            logger.warning("ElevenLabs voice clone failed: %s", response.text)
+            return None
+        payload = response.json()
+        return payload.get("voice_id")
+    except Exception as exc:
+        logger.exception("Error calling ElevenLabs voice clone: %s", exc)
+        return None
+
 
 # --- RapidAPI Instagram Configuration ---
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
@@ -155,7 +277,7 @@ def _update_instagram_media(media_id: str, updates: Dict[str, Any]) -> Dict[str,
 def _fetch_profile(profile_id: str) -> Optional[Dict[str, Any]]:
     _require_supabase_configuration()
     response = supabase_session.get(
-        f"{SUPABASE_REST_URL}/profiles",
+        f"{SUPABASE_REST_URL}/user_profiles",
         params={"id": f"eq.{profile_id}", "select": "*"},
         timeout=30,
     )
@@ -167,7 +289,7 @@ def _fetch_profile(profile_id: str) -> Optional[Dict[str, Any]]:
 def _update_profile(profile_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     _require_supabase_configuration()
     response = supabase_session.patch(
-        f"{SUPABASE_REST_URL}/profiles",
+        f"{SUPABASE_REST_URL}/user_profiles",
         params={"id": f"eq.{profile_id}"},
         data=json.dumps(updates),
         timeout=30,
@@ -488,61 +610,138 @@ def process_media_record(record: Dict[str, Any]) -> Dict[str, Any]:
 
 @app.route("/parent-request", methods=["POST"])
 def parent_request() -> Response:
-    payload = request.get_json(silent=True) or {}
-    profile_id = payload.get("profile_id")
-    parent_email = payload.get("parent_email")
-    confirmation_url = payload.get("confirmation_url")
-    student_name = payload.get("student_name")
-    instagram_username = payload.get("instagram_username")
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Unauthorized"}), 401
 
-    missing = [field for field in ("profile_id", "parent_email", "confirmation_url") if not payload.get(field)]
-    if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+    access_token = auth_header.split(" ", 1)[1].strip()
+    if not access_token:
+        return jsonify({"error": "Unauthorized"}), 401
 
     try:
-        profile = _fetch_profile(profile_id)
+        user = _fetch_authenticated_user(access_token)
+    except PermissionError:
+        return jsonify({"error": "Unauthorized"}), 401
     except Exception as exc:
-        logger.exception("Failed to load profile %s for parent request", profile_id)
+        logger.exception("Failed to fetch authenticated Supabase user.")
         return jsonify({"error": str(exc)}), 500
 
-    if not profile:
-        return jsonify({"error": "Profile not found."}), 404
+    user_id = user.get("id")
+    if not user_id:
+        return jsonify({"error": "Unable to determine the current user."}), 400
 
-    updates: Dict[str, Any] = {
+    content_type = request.headers.get("Content-Type") or ""
+    if "multipart/form-data" in content_type:
+        payload = request.form
+    else:
+        payload = request.get_json(silent=True) or {}
+
+    instagram_username = (
+        payload.get("instagramUsername") or payload.get("instagram_username") or ""
+    ).strip()
+    parent_email = (payload.get("parentEmail") or payload.get("parent_email") or "").strip()
+    consent_flag = payload.get("consentGranted") or payload.get("consent_granted")
+
+    if not instagram_username:
+        return jsonify({"error": "Instagram username is required."}), 400
+    if not parent_email:
+        return jsonify({"error": "Parent email is required."}), 400
+    if str(consent_flag).lower() not in {"true", "1", "yes"}:
+        return jsonify({"error": "Consent must be granted before notifying a parent."}), 400
+
+    voice_file = request.files.get("voiceSample") or request.files.get("voice_sample")
+    voice_sample_url: Optional[str] = None
+    voice_profile_id: Optional[str] = None
+
+    if voice_file and voice_file.filename:
+        voice_bytes = voice_file.read()
+        if voice_bytes:
+            try:
+                voice_sample_url = _upload_voice_sample_for_user(
+                    user_id,
+                    voice_file.filename,
+                    voice_bytes,
+                    voice_file.mimetype,
+                )
+            except Exception as exc:
+                logger.exception("Failed to upload voice sample for %s", user_id)
+                return jsonify({"error": f"Voice sample upload failed: {exc}"}), 500
+
+            voice_profile_id = _register_elevenlabs_voice(
+                user_id,
+                voice_file.filename,
+                voice_bytes,
+                voice_file.mimetype,
+            )
+        else:
+            logger.warning("Received empty voice sample for user %s", user_id)
+
+    profile_payload: Dict[str, Any] = {
+        "id": user_id,
+        "email": user.get("email"),
+        "ig_username": instagram_username,
         "parent_email": parent_email,
         "is_parent_confirmed": False,
-        "parent_confirmed_at": None,
     }
+    if voice_sample_url:
+        profile_payload["voice_sample_url"] = voice_sample_url
+    if voice_profile_id:
+        profile_payload["voice_profile_id"] = voice_profile_id
 
     try:
-        updated_profile = _update_profile(profile_id, updates)
+        profile = _upsert_user_profile(profile_payload)
     except Exception as exc:
-        logger.exception("Failed to persist parent email for %s", profile_id)
-        return jsonify({"error": str(exc)}), 500
+        logger.exception("Failed to upsert user profile for %s", user_id)
+        return jsonify({"error": f"Failed to save profile: {exc}"}), 500
+
+    token = str(uuid.uuid4())
+    expires_at = (dt.datetime.utcnow() + dt.timedelta(days=3)).isoformat()
+
+    try:
+        _insert_parent_confirmation(
+            {
+                "user_id": user_id,
+                "parent_email": parent_email,
+                "token": token,
+                "status": "pending",
+                "expires_at": expires_at,
+            }
+        )
+    except Exception as exc:
+        logger.exception("Failed to insert parent confirmation for %s", user_id)
+        return jsonify({"error": f"Failed to record parent confirmation request: {exc}"}), 500
+
+    if not APP_BASE_URL:
+        return jsonify({"error": "APP_BASE_URL is not configured on the backend."}), 500
+
+    confirmation_url = f"{APP_BASE_URL.rstrip('/')}/api/parent-request/confirm?token={token}"
 
     try:
         email_result = _send_parent_confirmation_email(
             parent_email=parent_email,
-            student_name=student_name,
+            student_name=user.get("user_metadata", {}).get("full_name") or user.get("email"),
             confirmation_url=confirmation_url,
             instagram_username=instagram_username,
         )
     except Exception as exc:
+        logger.exception("Failed to dispatch parent confirmation email.")
         return jsonify({"error": f"Failed to send confirmation email: {exc}"}), 502
 
     if isinstance(email_result, dict) and email_result.get("skipped"):
         return jsonify(
             {
                 "warning": "Email delivery skipped due to missing configuration.",
-                "profile": updated_profile or updates,
+                "profile": profile,
             }
         ), 503
 
     return jsonify(
         {
             "message": "Parent confirmation email sent.",
-            "profile": updated_profile or updates,
-            "email": email_result,
+            "profile": profile,
+            "voice_sample_url": voice_sample_url,
+            "voice_profile_id": voice_profile_id,
+            "expires_at": expires_at,
         }
     )
 

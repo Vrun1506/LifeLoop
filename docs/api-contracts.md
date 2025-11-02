@@ -1,9 +1,9 @@
 # API Contracts
 
-## POST `/api/parent-request`
+## Backend POST `/parent-request`
 
 - **Purpose**: Capture family consent details after signup, upload optional voice samples, and trigger the parent confirmation email.
-- **Auth**: Requires an authenticated Supabase session (cookie-based).
+- **Auth**: Requires `Authorization: Bearer <Supabase access token>` (obtained via `supabase.auth.getSession()` on the client).
 - **Request Body**: `multipart/form-data`
   - `instagramUsername` (`string`, required) – Supabase profile handle to associate with import jobs.
   - `parentEmail` (`string`, required) – Destination for the consent email.
@@ -12,19 +12,20 @@
 - **Success Response** `200`
   ```json
   {
-    "message": "Parent confirmation request recorded and email sent.",
-    "voiceSampleUrl": "https://cdn.lifeloop.family/voice-samples/<uid>/<filename>",
-    "voiceProfileId": "aaaa1111-bbbb-2222-cccc-3333dddd4444",
-    "confirmationExpiresAt": "2025-11-02T12:00:00.000Z"
+    "message": "Parent confirmation email sent.",
+    "voice_sample_url": "https://cdn.lifeloop.family/voice-samples/<uid>/<filename>",
+    "voice_profile_id": "aaaa1111-bbbb-2222-cccc-3333dddd4444",
+    "expires_at": "2025-11-02T12:00:00.000Z"
   }
   ```
 - **Failure Responses**
   - `400` – Missing instagram username, parent email, or consent flag.
-  - `401` – No active Supabase session.
-  - `500` – Upload, Supabase, ElevenLabs, or Mailgun failure.
+  - `401` – Missing/invalid Supabase access token.
+  - `500` – Upload, Supabase, ElevenLabs, or Resend dispatch failure.
 - **Notes**
   - Upserts `user_profiles` with `parent_email`, resets `is_parent_confirmed=false`, and records both `voice_sample_url` and `voice_profile_id` (when available).
-  - Inserts a `parent_confirmations` row (`status='pending'`, 72h expiry) then dispatches a Mailgun email with the confirmation link.
+  - Inserts a `parent_confirmations` row (`status='pending'`, 72h expiry) and dispatches the consent email via Resend.
+  - Frontend needs `NEXT_PUBLIC_BACKEND_API_BASE_URL` to point at this Flask host; server actions use `BACKEND_API_BASE_URL`.
 
 ## GET `/api/parent-request/confirm?token=<uuid>`
 

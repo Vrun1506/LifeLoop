@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { RefreshInstagramButton } from './RefreshInstagramButton'
+import { SignOutButton } from './SignOutButton'
 
 type RawInstagramMediaRow = {
   id: string
@@ -25,7 +27,7 @@ const MOCK_MEDIA: DashboardMediaItem[] = [
   {
     id: 'mock-1',
     imageUrl:
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1549576490-b0b4831ef60a?auto=format&fit=crop&w=1200&q=80',
     caption:
       'Grandma teaching Maya how to bake the family cinnamon rolls on Saturday morning.',
     captionConfidence: 0.93,
@@ -35,7 +37,7 @@ const MOCK_MEDIA: DashboardMediaItem[] = [
   {
     id: 'mock-2',
     imageUrl:
-      'https://images.unsplash.com/photo-1527153907022-465ee4752fdc?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=1200&q=80',
     caption:
       'First robotics club showcase — the team cheered when the robot completed its loop.',
     captionConfidence: 0.88,
@@ -45,7 +47,7 @@ const MOCK_MEDIA: DashboardMediaItem[] = [
   {
     id: 'mock-3',
     imageUrl:
-      'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=1200&q=80',
     caption:
       'End-of-term art show: Olivia and her grandparents admiring the mural she painted together with her class.',
     captionConfidence: 0.97,
@@ -66,7 +68,7 @@ const mediaBaseUrl =
   ''
 
 const preferMockData =
-  process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD !== 'false'
+  process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD === 'true'
 
 function resolveImageUrl(row: RawInstagramMediaRow) {
   if (row.storage_key) {
@@ -124,7 +126,11 @@ function formatProcessedAt(timestamp: string | null) {
   }
 }
 
-function ConsentWarning() {
+function ConsentWarning({
+  parentEmail,
+}: {
+  parentEmail?: string | null
+}) {
   return (
     <section className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-5 text-sm text-amber-100">
       <h2 className="text-base font-semibold text-amber-200">
@@ -136,6 +142,12 @@ function ConsentWarning() {
         bridge student, parent, and grandparent worlds while keeping everyone
         aligned on privacy.
       </p>
+      {parentEmail && (
+        <p className="mt-3 text-xs text-amber-100/80">
+          Invite sent to <span className="font-medium text-amber-50">{parentEmail}</span>. Ask them
+          to check their inbox (and spam folder) for the LifeLoop consent email.
+        </p>
+      )}
     </section>
   )
 }
@@ -149,11 +161,12 @@ function MockDataNotice() {
       <p className="mt-2 leading-relaxed">
         Instagram ingestion is finishing setup in the backend sprint. These
         Lifeloop memories use mock data so design, accessibility, and narration
-        review can proceed in parallel. Flip
+        review can proceed in parallel. Set
         {' '}
-        <code>NEXT_PUBLIC_USE_MOCK_DASHBOARD=false</code>
+        <code>NEXT_PUBLIC_USE_MOCK_DASHBOARD=true</code>
         {' '}
-        in <code>.env.local</code> once the live endpoint is ready.
+        in <code>.env.local</code> when you want to showcase curated samples;
+        leave it unset or <code>false</code> for live Instagram ingestion.
       </p>
     </section>
   )
@@ -230,6 +243,49 @@ function GalleryGrid({ items }: { items: DashboardMediaItem[] }) {
   )
 }
 
+function DashboardNav({
+  instagramHandle,
+}: {
+  instagramHandle?: string | null
+}) {
+  return (
+    <nav className="sticky top-0 z-40 border-b border-white/10 bg-[#0D1C27]/90 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <div className="flex items-center gap-2 text-white">
+          <span className="text-xl font-semibold tracking-tight">
+            LifeLoop
+          </span>
+          <span className="rounded-full border border-cyan-400/40 bg-cyan-500/15 px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.25em] text-cyan-200/80">
+            Legacy
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm text-white/70">
+          <a href="#gallery" className="transition hover:text-white">
+            Gallery
+          </a>
+          <a href="#digest" className="transition hover:text-white">
+            Digest Preview
+          </a>
+          <a href="#future-roadmap" className="transition hover:text-white">
+            Roadmap
+          </a>
+          {instagramHandle && (
+            <span className="hidden text-xs text-white/50 sm:inline">
+              @{instagramHandle}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <RefreshInstagramButton />
+          <SignOutButton />
+        </div>
+      </div>
+    </nav>
+  )
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -240,6 +296,12 @@ export default async function DashboardPage() {
   if (!user) {
     redirect('/login')
   }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('ig_username, parent_email, is_parent_confirmed')
+    .eq('id', user.id)
+    .maybeSingle()
 
   let fetchedMedia: DashboardMediaItem[] = []
   let fetchError: string | null = null
@@ -263,9 +325,15 @@ export default async function DashboardPage() {
 
   const usingMockData = preferMockData || !fetchedMedia.length
   const itemsToRender = usingMockData ? MOCK_MEDIA : fetchedMedia
+  const parentPending = profile?.is_parent_confirmed === false
+
+  const instagramHandle =
+    profile?.ig_username || user.user_metadata?.instagram_username || null
 
   return (
     <div className="min-h-screen bg-[#0B1720] text-white">
+      <DashboardNav instagramHandle={instagramHandle} />
+
       <header className="border-b border-white/10 bg-[#101F2C]/80 px-6 py-6 shadow-lg shadow-black/20">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -290,7 +358,18 @@ export default async function DashboardPage() {
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
-        <ConsentWarning />
+        {profileError && (
+          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-100">
+            <p className="font-medium text-rose-200">
+              Could not load your profile record.
+            </p>
+            <p className="mt-1 text-rose-100/80">{profileError.message}</p>
+          </div>
+        )}
+
+        {parentPending && (
+          <ConsentWarning parentEmail={profile?.parent_email} />
+        )}
 
         {fetchError && (
           <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-100">
@@ -305,7 +384,48 @@ export default async function DashboardPage() {
 
         {usingMockData && <MockDataNotice />}
 
-        <GalleryGrid items={itemsToRender} />
+        <section id="gallery" className="space-y-6">
+          <GalleryGrid items={itemsToRender} />
+        </section>
+
+        <section
+          id="digest"
+          className="rounded-lg border border-white/10 bg-white/5 p-6 text-sm leading-relaxed text-white/80"
+        >
+          <h2 className="text-lg font-semibold text-white">
+            Email digest preview
+          </h2>
+          <p className="mt-3">
+            Our Resend-powered digest bundles the latest narrated posts into a
+            single email for parents and grandparents. Once ingestion runs, hit
+            “Sync Instagram” above and we&apos;ll show fresh highlights here for
+            review and QA.
+          </p>
+        </section>
+
+        <section
+          id="future-roadmap"
+          className="rounded-lg border border-white/10 bg-white/5 p-6 text-sm leading-relaxed text-white/80"
+        >
+          <h2 className="text-lg font-semibold text-white">
+            Roadmap snapshots
+          </h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5">
+            <li>
+              <span className="font-medium text-white">Immich-inspired tagging:</span>{' '}
+              auto-label family members once we integrate face recognition with
+              explicit consent.
+            </li>
+            <li>
+              <span className="font-medium text-white">Photobook generator:</span>{' '}
+              export your gallery into printable PDF keepsakes with one click.
+            </li>
+            <li>
+              <span className="font-medium text-white">Instagram archive import:</span>{' '}
+              backfill years of memories using the official data export.
+            </li>
+          </ul>
+        </section>
       </main>
     </div>
   )
