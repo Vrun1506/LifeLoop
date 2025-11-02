@@ -69,11 +69,11 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white/10 p-8 rounded-lg">
               <h3 className="text-2xl font-bold mb-4 text-[#FCF7F8]">Real-time Tracking</h3>
-              <p className="text-[#FCF7F8]">Monitor your children's location and activities in real-time with our advanced tracking system.</p>
+              <p className="text-[#FCF7F8]">Monitor your children&apos;s location and activities in real-time with our advanced tracking system.</p>
             </div>
             <div className="bg-white/10 p-8 rounded-lg">
               <h3 className="text-2xl font-bold mb-4 text-[#FCF7F8]">Safe & Secure</h3>
-              <p className="text-[#FCF7F8]">Your family's privacy is our priority. All data is encrypted and securely stored.</p>
+              <p className="text-[#FCF7F8]">Your family&apos;s privacy is our priority. All data is encrypted and securely stored.</p>
             </div>
             <div className="bg-white/10 p-8 rounded-lg">
               <h3 className="text-2xl font-bold mb-4 text-[#FCF7F8]">Easy to Use</h3>
